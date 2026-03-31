@@ -1,0 +1,44 @@
+name: Epic Free Game Bot
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # runs every 5 minutes for fast button response
+  workflow_dispatch:         # lets you run it manually from GitHub
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Restore saved state (seen games + offset)
+        uses: actions/cache@v3
+        with:
+          path: |
+            seen_games.json
+            offset.json
+          key: bot-state-${{ github.run_id }}
+          restore-keys: |
+            bot-state-
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run bot
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: python epic_free_game_bot.py
+
+      - name: Save state (seen games + offset)
+        uses: actions/cache/save@v3
+        if: always()
+        with:
+          path: |
+            seen_games.json
+            offset.json
+          key: bot-state-${{ github.run_id }}
