@@ -51,8 +51,19 @@ def get_epic_games_rich():
             promos = game.get("promotions") or {}
             title = game.get("title", "Unknown Game")
             desc = (game.get("description", "") or "")[:150]
-            slug = game.get("productSlug") or game.get("urlSlug") or ""
-            url = f"https://store.epicgames.com/en-US/p/{slug}" if slug else "https://store.epicgames.com/en-US/free-games"
+            
+            # Try multiple slug fields in order of preference
+            slug = (game.get("catalogNs", {}).get("mappings", [{}])[0].get("pageSlug") or
+                    game.get("offerMappings", [{}])[0].get("pageSlug") or
+                    game.get("productSlug") or 
+                    game.get("urlSlug") or "")
+            
+            # Build URL with fallback to generic free games page
+            if slug:
+                url = f"https://store.epicgames.com/en-US/p/{slug}"
+            else:
+                url = "https://store.epicgames.com/en-US/free-games"
+            
             price_info = game.get("price", {}).get("totalPrice", {})
             original = price_info.get("fmtPrice", {}).get("originalPrice", "")
             
