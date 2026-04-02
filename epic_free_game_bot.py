@@ -36,7 +36,9 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot is running with Auto-Notifications and Images!"
+    # Returning "OK" uses almost zero data and prevents the 
+    # "Output too large" error on Cron-job.org
+    return "OK", 200
 
 def run_flask():
     port = int(os.environ.get("PORT", 5000))
