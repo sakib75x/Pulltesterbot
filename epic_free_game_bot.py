@@ -36,7 +36,9 @@ def home():
     return "Bot is running with Auto-Notifications!"
 
 def run_flask():
+    # Render provides the PORT environment variable automatically
     port = int(os.environ.get("PORT", 5000))
+    # Use 0.0.0.0 to be accessible externally
     app.run(host='0.0.0.0', port=port)
 
 # --- DATA FETCHING ---
