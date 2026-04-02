@@ -11,8 +11,11 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 # --- CONFIGURATION ---
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
-EPIC_API_URL = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=en-US&country=BD&allowCountries=BD"
-SEEN_FILE = "seen_games.json"
+
+if not BOT_TOKEN:
+    raise ValueError("No BOT_TOKEN found in environment variables!")
+if not CHAT_ID:
+    raise ValueError("No CHAT_ID found in environment variables!")
 
 # --- DATABASE LOGIC ---
 def load_seen_games():
