@@ -47,8 +47,8 @@ def run_flask():
 # --- DATA FETCHING ---
 def get_epic_games_rich():
     try:
-        # Increased timeout and removed regional restriction for better compatibility
-        URL = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=en-US"
+        # Use the base promotional URL
+        URL = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=en-US&country=US&allowCountries=US"
         resp = requests.get(URL, timeout=20)
         data = resp.json()
         
@@ -58,39 +58,54 @@ def get_epic_games_rich():
         for game in elements:
             title = game.get("title", "Unknown Game")
             promos = game.get("promotions")
-            
-            # Skip if there are no promotions at all
-            if not promos:
-                continue
+            if not promos: continue
 
-            # Check for Current Offers
-            curr_promos = promos.get("promotionalOffers", [])
-            for outer in curr_promos:
-                for o in outer.get("promotionalOffers", []):
-                    # discountPercentage 0 means it is 100% free
-                    if o.get("discountSetting", {}).get("discountPercentage") == 0:
-                        slug = game.get("productSlug") or game.get("urlSlug")
+            # --- FIND THE URL SLUG (The tricky part) ---
+            # Epic stores this in about 4 different possible places
+            slug = None
+            if game.get("productSlug"):
+                slug = game.get("productSlug")
+            elif game.get("urlSlug"):
+                slug = game.get("urlSlug")
+            elif game.get("catalogNs", {}).get("mappings"):
+                # Sometimes it's buried in mappings
+                mappings = game["catalogNs"]["mappings"]
+                if mappings:
+                    slug = mappings[0].get("pageSlug")
+            
+            clean_url = f"https://store.epicgames.com/en-US/p/{slug}" if slug else "https://store.epicgames.com/en-US/free-games"
+
+            # --- CHECK CURRENT OFFERS ---
+            curr_offers = promos.get("promotionalOffers", [])
+            for group in curr_offers:
+                for offer in group.get("promotionalOffers", []):
+                    if offer.get("discountSetting", {}).get("discountPercentage") == 0:
+                        end_date = offer.get("endDate", "Soon")[:10]
+                        price_data = game.get("price", {}).get("totalPrice", {}).get("fmtPrice", {})
+                        original = price_data.get("originalPrice", "???")
+                        
                         current_list.append({
                             "title": title,
-                            "desc": game.get("description", ""),
-                            "url": f"https://store.epicgames.com/en-US/p/{slug}" if slug else "https://store.epicgames.com/en-US/free-games",
-                            "original": game.get("price", {}).get("totalPrice", {}).get("fmtPrice", {}).get("originalPrice", "???"),
-                            "end": o.get("endDate", "")[:10]
+                            "desc": (game.get("description", "") or "")[:150],
+                            "url": clean_url,
+                            "original": original,
+                            "end": end_date
                         })
 
-            # Check for Upcoming Offers
-            up_promos = promos.get("upcomingPromotionalOffers", [])
-            for outer in up_promos:
-                for o in outer.get("promotionalOffers", []):
-                    if o.get("discountSetting", {}).get("discountPercentage") == 0:
+            # --- CHECK UPCOMING OFFERS ---
+            up_offers = promos.get("upcomingPromotionalOffers", [])
+            for group in up_offers:
+                for offer in group.get("promotionalOffers", []):
+                    if offer.get("discountSetting", {}).get("discountPercentage") == 0:
+                        start_date = offer.get("startDate", "Unknown")[:10]
                         upcoming_list.append({
-                            "title": title, 
-                            "start": o.get("startDate", "")[:10]
+                            "title": title,
+                            "start": start_date
                         })
                         
         return current_list, upcoming_list
     except Exception as e:
-        print(f"Error fetching games: {e}")
+        print(f"API Error: {e}")
         return [], []
 
 # --- AUTO-NOTIFICATION LOGIC ---
